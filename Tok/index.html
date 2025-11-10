@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tok</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; color: #fff; font-family: -apple-system, sans-serif; min-height: 100vh; }
+    a { color: #fff; text-decoration: none; }
+    button { background: #fff; color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    input, textarea { width: 100%; padding: 12px; background: #111; border: 1px solid #333; color: #fff; border-radius: 8px; margin: 8px 0; }
+
+    .container { max-width: 500px; margin: 0 auto; padding: 16px; }
+    .nav { position: fixed; bottom: 0; left: 0; right: 0; background: #000; border-top: 1px solid #333; display: flex; justify-content: space-around; padding: 8px 0; }
+    .nav button { background: none; color: #aaa; font-size: 12px; padding: 8px; flex: 1; }
+    .nav button.active { color: #fff; border-top: 2px solid #fff; padding-top: 6px; }
+
+    .post { background: #111; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
+    .post img { width: 100%; border-radius: 8px; margin: 8px 0; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: #333; margin-right: 12px; }
+    .flex { display: flex; align-items: center; }
+    .mt { margin-top: 16px; }
+    .hidden { display: none; }
+
+    .profile-header { text-align: center; padding: 20px 0; }
+    .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: #333; margin: 0 auto 12px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- АВТОРИЗАЦИЯ -->
+  <div id="auth">
+    <h1 style="text-align:center; margin:40px 0;">Tok</h1>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="pass" placeholder="Пароль" />
+    <button onclick="login()">Войти</button>
+    <button onclick="register()">Регистрация</button>
+  </div>
+
+  <!-- ЛЕНТА -->
+  <div id="feed" class="hidden">
+    <h2>Лента</h2>
+    <textarea id="postText" placeholder="Что нового?"></textarea>
+    <input type="file" id="postImage" accept="image/*" />
+    <button onclick="addPost()">Опубликовать</button>
+    <div id="posts"></div>
+  </div>
+
+  <!-- ДРУЗЬЯ -->
+  <div id="friends" class="hidden">
+    <h2>Друзья</h2>
+    <input type="text" id="searchUser" placeholder="Поиск по логину" />
+    <button onclick="searchUsers()">Найти</button>
+    <div id="searchResults"></div>
+    <div id="friendList"></div>
+  </div>
+
+  <!-- СООБЩЕНИЯ -->
+  <div id="messages" class="hidden">
+    <h2>Сообщения</h2>
+    <input type="text" id="chatWith" placeholder="UID друга" />
+    <div id="chat" style="height:50vh; overflow-y:auto; background:#111; padding:12px; border-radius:8px; margin:12px 0;"></div>
+    <input type="text" id="msgText" placeholder="Сообщение" />
+    <button onclick="sendMessage()">Отправить</button>
+  </div>
+
+  <!-- ПРОФИЛЬ -->
+  <div id="profile" class="hidden">
+    <div class="profile-header">
+      <div class="profile-avatar" id="profileAvatar"></div>
+      <h2 id="profileName"></h2>
+      <p id="profileBio"></p>
+      <input type="file" id="avatarInput" accept="image/*" class="hidden" />
+      <button onclick="document.getElementById('avatarInput').click()">Сменить аватар</button>
+      <textarea id="bioInput" placeholder="О себе"></textarea>
+      <button onclick="saveProfile()">Сохранить</button>
+    </div>
+    <div id="userPosts"></div>
+  </div>
+
+</div>
+
+<!-- НИЖНЯЯ НАВИГАЦИЯ -->
+<div class="nav">
+  <button onclick="show('feed')" id="nav-feed">Лента</button>
+  <button onclick="show('friends')" id="nav-friends">Друзья</button>
+  <button onclick="show('messages')" id="nav-messages">Сообщения</button>
+  <button onclick="show('profile')" id="nav-profile">Профиль</button>
+  <button onclick="logout()">Выйти</button>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-storage-compat.js"></script>
+
+<script>
+  // ВСТАВЬ СВОЙ КОНФИГ ИЗ FIREBASE (ШАГ 4)
+  const firebaseConfig = {
+    apiKey: "// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyB2LnZ-ARHyt5HnroDXUGYDYq_f5uFti9Q",
+  authDomain: "tokarevsocial111.firebaseapp.com",
+  projectId: "tokarevsocial111",
+  storageBucket: "tokarevsocial111.firebasestorage.app",
+  messagingSenderId: "574146920180",
+  appId: "1:574146920180:web:036cec1df32db7169ea8a1"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);",
+    authDomain: "tok-html.firebaseapp.com",
+    projectId: "tok-html",
+    storageBucket: "tok-html.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abc123"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+  const storage = firebase.storage();
+
+  let currentUser = null;
+  let currentChat = null;
+
+  function login() {
+    const email = document.getElementById('email').value;
+    const pass = document.getElementById('pass').value;
+    auth.signInWithEmailAndPassword(email, pass).then(goToFeed).catch(alert);
+  }
+
+  function register() {
+    const email = document.getElementById('email').value;
+    const pass = document.getElementById('pass').value;
+    auth.createUserWithEmailAndPassword(email, pass).then(user => {
+      const uid = user.user.uid;
+      db.collection('users').doc(uid).set({
+        username: email.split('@')[0],
+        bio: '',
+        avatarUrl: ''
+      }).then(goToFeed);
+    }).catch(alert);
+  }
+
+  function logout() {
+    auth.signOut().then(() => {
+      document.getElementById('auth').classList.remove('hidden');
+      ['feed','friends','messages','profile'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    });
+  }
+
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if (user) {
+      document.getElementById('auth').classList.add('hidden');
+      show('feed');
+      loadFeed();
+      loadFriends();
+    }
+  });
+
+  function goToFeed() { show('feed'); loadFeed(); }
+
+  function show(page) {
+    ['feed','friends','messages','profile'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+      document.getElementById('nav-'+id).classList.remove('active');
+    });
+    document.getElementById(page).classList.remove('hidden');
+    document.getElementById('nav-'+page).classList.add('active');
+
+    if (page === 'feed') loadFeed();
+    if (page === 'friends') loadFriends();
+    if (page === 'profile') loadProfile();
+    if (page === 'messages') loadChatList();
+  }
+
+  function addPost() {
+    const text = document.getElementById('postText').value;
+    const file = document.getElementById('postImage').files[0];
+    if (!text && !file) return;
+
+    const post = { uid: currentUser.uid, text, likes: [], comments: [], timestamp: Date.now() };
+
+    if (file) {
+      const ref = storage.ref('posts/' + Date.now());
+      ref.put(file).then(snap => {
+        snap.ref.getDownloadURL().then(url => {
+          post.imageUrl = url;
+          savePost(post);
+        });
+      });
+    } else {
+      savePost(post);
+    }
+  }
+
+  function savePost(post) {
+    db.collection('posts').add(post).then(() => {
+      document.getElementById('postText').value = '';
+      document.getElementById('postImage').value = '';
+    });
+  }
+
+  function loadFeed() {
+    db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(snap => {
+      const html = snap.docs.map(doc => renderPost(doc.data(), doc.id)).join('');
+      document.getElementById('posts').innerHTML = html;
+    });
+  }
+
+  function renderPost(post, id) {
+    return `
+      <div class="post">
+        <div class="flex" onclick="openProfile('${post.uid}')">
+          <div class="avatar"></div>
+          <strong>${post.username || 'User'}</strong>
+        </div>
+        <p>${post.text}</p>
+        ${post.imageUrl ? `<img src="${post.imageUrl}" />` : ''}
+        <div class="flex justify-between mt">
+          <button onclick="like('${id}')">Лайк ${post.likes?.length || 0}</button>
+          <button onclick="toggleComment('${id}')">Комментарии</button>
+        </div>
+        <div id="comments-${id}"></div>
+        <div class="flex mt">
+          <input id="comment-${id}" placeholder="Комментарий" style="flex:1" />
+          <button onclick="addComment('${id}')">Отправить</button>
+        </div>
+      </div>`;
+  }
+
+  function like(id) {
+    const ref = db.collection('posts').doc(id);
+    ref.get().then(doc => {
+      const likes = doc.data().likes || [];
+      const i = likes.indexOf(currentUser.uid);
+      if (i > -1) likes.splice(i, 1); else likes.push(currentUser.uid);
+      ref.update({ likes });
+    });
+  }
+
+  function addComment(id) {
+    const text = document.getElementById(`comment-${id}`).value;
+    if (!text) return;
+    db.collection('posts').doc(id).update({
+      comments: firebase.firestore.FieldValue.arrayUnion({
+        uid: currentUser.uid,
+        text,
+        username: currentUser.email.split('@')[0]
+      })
+    });
+    document.getElementById(`comment-${id}`).value = '';
+  }
+
+  function openProfile(uid) {
+    window.location.hash = uid;
+    loadProfile(uid);
+    show('profile');
+  }
+
+  function loadProfile(uid = currentUser.uid) {
+    db.collection('users').doc(uid).get().then(doc => {
+      const data = doc.data();
+      document.getElementById('profileName').textContent = data.username;
+      document.getElementById('profileBio').textContent = data.bio;
+      document.getElementById('profileAvatar').style.backgroundImage = data.avatarUrl ? `url(${data.avatarUrl})` : '';
+    });
+
+    db.collection('posts').where('uid', '==', uid).orderBy('timestamp', 'desc').onSnapshot(snap => {
+      document.getElementById('userPosts').innerHTML = snap.docs.map(d => renderPost(d.data(), d.id)).join('');
+    });
+  }
+
+  document.getElementById('avatarInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    const ref = storage.ref('avatars/' + currentUser.uid);
+    ref.put(file).then(snap => {
+      snap.ref.getDownloadURL().then(url => {
+        db.collection('users').doc(currentUser.uid).update({ avatarUrl: url });
+      });
+    });
+  });
+
+  function saveProfile() {
+    const bio = document.getElementById('bioInput').value;
+    db.collection('users').doc(currentUser.uid).update({ bio });
+  }
+
+  function searchUsers() {
+    const query = document.getElementById('searchUser').value;
+    db.collection('users').where('username', '>=', query).where('username', '<=', query + '\uf8ff').get().then(snap => {
+      const html = snap.docs.map(doc => {
+        const u = doc.data();
+        return `<div class="flex justify-between p-2 bg-gray-800 rounded mb-2">
+          <span>${u.username}</span>
+          <button onclick="addFriend('${doc.id}')">Добавить</button>
+        </div>`;
+      }).join('');
+      document.getElementById('searchResults').innerHTML = html;
+    });
+  }
+
+  function addFriend(uid) {
+    db.collection('friends').add({ uid: currentUser.uid, friendUid: uid });
+    db.collection('friends').add({ uid, friendUid: currentUser.uid });
+  }
+
+  function loadFriends() {
+    db.collection('friends').where('uid', '==', currentUser.uid).onSnapshot(snap => {
+      const html = snap.docs.map(doc => {
+        const f = doc.data();
+        return `<div class="p-2 bg-gray-800 rounded mb-2" onclick="openChat('${f.friendUid}')">${f.friendUid}</div>`;
+      }).join('');
+      document.getElementById('friendList').innerHTML = html;
+    });
+  }
+
+  function openChat(uid) {
+    currentChat = uid;
+    document.getElementById('chatWith').value = uid;
+    loadChat();
+  }
+
+  function loadChat() {
+    const chatId = [currentUser.uid, currentChat].sort().join('_');
+    db.collection('chats').doc(chatId).collection('messages').orderBy('timestamp').onSnapshot(snap => {
+      const html = snap.docs.map(doc => {
+        const m = doc.data();
+        return `<div style="text-align:${m.from === currentUser.uid ? 'right' : 'left'}; margin:8px 0;">
+          <div style="display:inline-block; background:${m.from === currentUser.uid ? '#fff' : '#333'}; color:${m.from === currentUser.uid ? '#000' : '#fff'}; padding:8px 12px; border-radius:12px; max-width:80%;">
+            ${m.text}
+          </div>
+        </div>`;
+      }).join('');
+      document.getElementById('chat').innerHTML = html;
+      document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+    });
+  }
+
+  function sendMessage() {
+    const text = document.getElementById('msgText').value;
+    if (!text || !currentChat) return;
+    const chatId = [currentUser.uid, currentChat].sort().join('_');
+    db.collection('chats').doc(chatId).collection('messages').add({
+      text,
+      from: currentUser.uid,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('msgText').value = '';
+  }
+
+  window.addEventListener('load', () => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  });
+</script>
+
+</body>
+</html>
