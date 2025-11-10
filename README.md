@@ -1,0 +1,2 @@
+# tokfinalblyat
+moya soc set
